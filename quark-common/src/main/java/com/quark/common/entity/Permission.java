@@ -39,7 +39,7 @@ public class Permission implements Serializable{
 
     @JsonIgnore
     @ManyToMany(mappedBy = "permissions")
-    private Set<Role> roles = new HashSet<>();
+    private Set<Role> roles = new HashSet<Role>();
 
     public Integer getId() {
         return id;

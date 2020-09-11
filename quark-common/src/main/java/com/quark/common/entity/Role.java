@@ -32,7 +32,7 @@ public class Role implements Serializable{
     //角色与用户的关联关系
     @JsonIgnore
     @ManyToMany(mappedBy = "roles")
-    private Set<AdminUser> adminUsers = new HashSet<>();
+    private Set<AdminUser> adminUsers = new HashSet<AdminUser>();
 
     //角色与权限的关联关系
     @JsonIgnore
@@ -40,7 +40,7 @@ public class Role implements Serializable{
             joinColumns = {@JoinColumn(name = "role_id",referencedColumnName = "id")},
             inverseJoinColumns = {@JoinColumn(name = "permissions_id",referencedColumnName = "id")})
     @ManyToMany(cascade = CascadeType.ALL)
-    private Set<Permission> permissions = new HashSet<>();
+    private Set<Permission> permissions = new HashSet<Permission>();
 
     public Integer getId() {
         return id;

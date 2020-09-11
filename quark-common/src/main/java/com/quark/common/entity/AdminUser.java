@@ -37,7 +37,7 @@ public class AdminUser implements Serializable{
             joinColumns = {@JoinColumn(name = "adminuser_id",referencedColumnName = "id")},
             inverseJoinColumns = {@JoinColumn(name = "role_id",referencedColumnName = "id")})
     @ManyToMany(cascade = CascadeType.ALL)
-    private Set<Role> roles = new HashSet<>();
+    private Set<Role> roles = new HashSet<Role>();
 
     public Integer getId() {
         return id;
