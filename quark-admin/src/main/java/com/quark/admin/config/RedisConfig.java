@@ -15,19 +15,20 @@ import redis.clients.jedis.JedisPoolConfig;
 @Configuration
 @EnableCaching
 public class RedisConfig extends CachingConfigurerSupport {
-    @Value("${spring.redis.host}")
+
+    @Value("${spring.redis.host:}")
     private String host;
 
-    @Value("${spring.redis.port}")
+    @Value("${spring.redis.port:6379}")
     private int port;
 
-    @Value("${spring.redis.timeout}")
+    @Value("${spring.redis.timeout:0}")
     private int timeout;
 
-    @Value("${spring.redis.pool.max-idle}")
+    @Value("${spring.redis.pool.max-idle:8}")
     private int maxIdle;
 
-    @Value("${spring.redis.pool.max-wait}")
+    @Value("${spring.redis.pool.max-wait:-1}")
     private long maxWaitMillis;
 
     @Bean

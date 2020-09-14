@@ -31,16 +31,16 @@ public class ShiroConfig {
     @Autowired
     private PermissionService permissionService;
 
-    @Value("${spring.redis.host}")
+    @Value("${spring.redis.host:}")
     private String host;
 
-    @Value("${spring.redis.port}")
+    @Value("${spring.redis.port:6379}")
     private int port;
 
-    @Value("${spring.redis.timeout}")
+    @Value("${spring.redis.timeout:0}")
     private int timeout;
 
-    @Value("${spring.redis.password}")
+    @Value("${spring.redis.password:}")
     private String password;
 
     @Bean

@@ -1,5 +1,10 @@
 package com.quark.chat.handler;
 
+import static com.quark.chat.protocol.QuarkChatType.AUTH_REQUEST_CODE;
+import static com.quark.chat.protocol.QuarkChatType.MESSAGE_REQUEST_CODE;
+import static com.quark.chat.protocol.QuarkChatType.PING_CODE;
+import static com.quark.chat.protocol.QuarkChatType.PONG_CODE;
+
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import com.quark.chat.protocol.QuarkChatProtocol;
@@ -11,7 +16,13 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.websocketx.*;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
+import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import org.slf4j.Logger;
@@ -21,13 +32,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import static com.quark.chat.protocol.QuarkChatType.*;
-
 /**
  * @Author : ChinaLHR
  * @Date : Create in 10:00 2017/10/24
  * @Email : 13435500980@163.com
- *
+ * <p>
  * WebSocket握手/用户认证 Handler
  */
 @ChannelHandler.Sharable
@@ -45,20 +54,20 @@ public class UserAuthHandler extends SimpleChannelInboundHandler {
     @Autowired
     private ChannelManager manager;
 
-    @Override
     protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
         //Http请求（第一次握手）
-        if (msg instanceof FullHttpRequest){
+        if (msg instanceof FullHttpRequest) {
             handleHttpRequest(ctx, (FullHttpRequest) msg);
         }
         //处理WebSocket请求
-        else if (msg instanceof WebSocketFrame){
+        else if (msg instanceof WebSocketFrame) {
             handleWebSocket(ctx, (WebSocketFrame) msg);
         }
     }
 
     /**
      * 内部链路检测
+     *
      * @param ctx
      * @param evt
      * @throws Exception
@@ -66,8 +75,8 @@ public class UserAuthHandler extends SimpleChannelInboundHandler {
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         //当通道空闲时由IdleStateHandler触发的用户事件
-        if (evt instanceof IdleStateEvent){
-           IdleStateEvent event = (IdleStateEvent) evt;
+        if (evt instanceof IdleStateEvent) {
+            IdleStateEvent event = (IdleStateEvent) evt;
             // 判断Channel是否读空闲, 读空闲时移除Channel
             if (event.state().equals(IdleState.READER_IDLE)) {
                 final String address = NettyUtil.parseChannelRemoteAddr(ctx.channel());
@@ -82,7 +91,7 @@ public class UserAuthHandler extends SimpleChannelInboundHandler {
     /**
      * HTTP握手反馈
      */
-    private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest request){
+    private void handleHttpRequest(ChannelHandlerContext ctx, FullHttpRequest request) {
         //判断是否是WebSocket协议
         if (!request.decoderResult().isSuccess() || !"websocket".equals(request.headers().get("Upgrade"))) {
             logger.warn("protobuf don't support WebSocket");
@@ -90,11 +99,11 @@ public class UserAuthHandler extends SimpleChannelInboundHandler {
             return;
         }
         WebSocketServerHandshakerFactory handshakerFactory = new WebSocketServerHandshakerFactory(
-                WEBSOCKET_URL, null, true);
+            WEBSOCKET_URL, null, true);
         handshaker = handshakerFactory.newHandshaker(request);
-        if (handshaker == null){
+        if (handshaker == null) {
             WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
-        }else {
+        } else {
             // 动态加入websocket的编解码处理
             handshaker.handshake(ctx.channel(), request);
             // 存储已经连接的Channel
@@ -104,12 +113,13 @@ public class UserAuthHandler extends SimpleChannelInboundHandler {
 
     /**
      * WebSocket反馈
+     *
      * @param ctx
      * @param frame
      */
-    private void handleWebSocket(ChannelHandlerContext ctx,WebSocketFrame frame){
+    private void handleWebSocket(ChannelHandlerContext ctx, WebSocketFrame frame) {
         //判断是否是关闭链路的命令
-        if (frame instanceof CloseWebSocketFrame){
+        if (frame instanceof CloseWebSocketFrame) {
             handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame.retain());
             manager.removeChannel(ctx.channel());
             logger.info("Have a WebSocket Channel Close");
@@ -117,40 +127,44 @@ public class UserAuthHandler extends SimpleChannelInboundHandler {
         }
 
         //判断是否是Ping消息
-        if (frame instanceof PingWebSocketFrame){
-            logger.info("ping message : ",frame.content().retain());
+        if (frame instanceof PingWebSocketFrame) {
+            logger.info("ping message : ", frame.content().retain());
             ctx.writeAndFlush(new PingWebSocketFrame(frame.content().retain()));
             return;
         }
 
         //判断是否是Pong消息
-        if (frame instanceof PongWebSocketFrame){
-            logger.info("pong message :",frame.content().retain());
+        if (frame instanceof PongWebSocketFrame) {
+            logger.info("pong message :", frame.content().retain());
             ctx.writeAndFlush(new PongWebSocketFrame(frame.content().retain()));
         }
 
         //仅支持文本消息
-        if (!(frame instanceof  TextWebSocketFrame)){
-            throw new UnsupportedOperationException(frame.getClass().getName()+"frame type not supported!!!");
+        if (!(frame instanceof TextWebSocketFrame)) {
+            throw new UnsupportedOperationException(frame.getClass().getName() + "frame type not supported!!!");
         }
-        String message = ((TextWebSocketFrame)frame).text();
-        QuarkClientProtocol clientProto = JSON.parseObject(message, new TypeReference<QuarkClientProtocol>(){});
+        String message = ((TextWebSocketFrame) frame).text();
+        QuarkClientProtocol clientProto = JSON.parseObject(message, new TypeReference<QuarkClientProtocol>() {
+        });
         byte type = clientProto.getType();
         Channel channel = ctx.channel();
-        if (clientProto.getMAGIC()!=QuarkChatProtocol.getMAGIC())return;//过滤Magic格式不正确的消息
-        switch (type){
+        if (clientProto.getMAGIC() != QuarkChatProtocol.getMAGIC()) {
+            return;//过滤Magic格式不正确的消息
+        }
+        switch (type) {
             case PING_CODE:
             case PONG_CODE:
                 //接受到Pong消息后更新User的时间，便于定时清理过期掉线的用户
                 manager.updateUserTime(channel);
-                logger.info("receiver pong message address :{}",NettyUtil.parseChannelRemoteAddr(channel));
+                logger.info("receiver pong message address :{}", NettyUtil.parseChannelRemoteAddr(channel));
                 return;
             case AUTH_REQUEST_CODE:
                 //进行认证
                 boolean isSuccess = manager.authUser(clientProto.getToken(), channel);
                 manager.broadMessage(QuarkChatProtocol.buildAuthProto(isSuccess));
-                if (isSuccess)
+                if (isSuccess) {
                     manager.broadMessage(QuarkChatProtocol.buildSysUserInfo(manager.getUsers()));
+                }
                 return;
             case MESSAGE_REQUEST_CODE:
                 break;//普通的消息留给MessageHandler处理
@@ -161,5 +175,10 @@ public class UserAuthHandler extends SimpleChannelInboundHandler {
 
         //MessageHandler处理
         ctx.fireChannelRead(frame.retain());
+    }
+
+    @Override
+    protected void messageReceived(ChannelHandlerContext channelHandlerContext, Object o) throws Exception {
+        channelRead0(channelHandlerContext, o);
     }
 }

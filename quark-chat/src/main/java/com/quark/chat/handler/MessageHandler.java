@@ -20,30 +20,32 @@ import org.springframework.stereotype.Component;
  * @Author : ChinaLHR
  * @Date : Create in 14:48 2017/10/24
  * @Email : 13435500980@163.com
- *
+ * <p>
  * 消息处理Handler
  */
 @ChannelHandler.Sharable
 @Scope("prototype")
 @Component
-public class MessageHandler extends SimpleChannelInboundHandler<TextWebSocketFrame>{
+public class MessageHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
+
     private static final Logger logger = LoggerFactory.getLogger(MessageHandler.class);
 
     @Autowired
     private ChannelManager manager;
 
-    @Override
     protected void channelRead0(ChannelHandlerContext ctx, TextWebSocketFrame frame) throws Exception {
         ChatUser chatUser = manager.getChatUser(ctx.channel());
-        if (chatUser!=null&&chatUser.isAuth()){
-            QuarkClientProtocol clientProto = JSON.parseObject(frame.text(), new TypeReference<QuarkClientProtocol>(){});
+        if (chatUser != null && chatUser.isAuth()) {
+            QuarkClientProtocol clientProto = JSON.parseObject(frame.text(), new TypeReference<QuarkClientProtocol>() {
+            });
             //广播消息
-            manager.broadMessage(QuarkChatProtocol.buildMessageCode(chatUser.getUser(),clientProto.getMsg()));
+            manager.broadMessage(QuarkChatProtocol.buildMessageCode(chatUser.getUser(), clientProto.getMsg()));
         }
     }
 
     /**
      * Channel取消注册
+     *
      * @param ctx
      * @throws Exception
      */
@@ -56,14 +58,21 @@ public class MessageHandler extends SimpleChannelInboundHandler<TextWebSocketFra
 
     /**
      * Netty I/O异常事件
+     *
      * @param ctx
      * @param cause
      * @throws Exception
      */
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        logger.error("connection error and close the channel:{}",cause);
+        logger.error("connection error and close the channel:{}", cause);
         manager.removeChannel(ctx.channel());
         manager.broadMessage(QuarkChatProtocol.buildSysUserInfo(manager.getUsers()));
+    }
+
+    @Override
+    protected void messageReceived(ChannelHandlerContext channelHandlerContext, TextWebSocketFrame textWebSocketFrame)
+        throws Exception {
+        channelRead0(channelHandlerContext, textWebSocketFrame);
     }
 }

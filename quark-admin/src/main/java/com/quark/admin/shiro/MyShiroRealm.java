@@ -4,17 +4,21 @@ import com.quark.admin.service.AdminUserService;
 import com.quark.admin.service.PermissionService;
 import com.quark.common.entity.AdminUser;
 import com.quark.common.entity.Permission;
+import java.util.List;
+import javax.annotation.Resource;
 import org.apache.shiro.SecurityUtils;
-import org.apache.shiro.authc.*;
+import org.apache.shiro.authc.AuthenticationException;
+import org.apache.shiro.authc.AuthenticationInfo;
+import org.apache.shiro.authc.AuthenticationToken;
+import org.apache.shiro.authc.LockedAccountException;
+import org.apache.shiro.authc.SimpleAuthenticationInfo;
+import org.apache.shiro.authc.UnknownAccountException;
 import org.apache.shiro.authz.AuthorizationInfo;
 import org.apache.shiro.authz.SimpleAuthorizationInfo;
 import org.apache.shiro.realm.AuthorizingRealm;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.util.ByteSource;
-
-import javax.annotation.Resource;
-import java.util.List;
 
 /**
  * Created by lhr on 17-8-1.
@@ -29,6 +33,7 @@ public class MyShiroRealm extends AuthorizingRealm {
 
     /**
      * 授权
+     *
      * @param principalCollection
      * @return
      */
@@ -39,12 +44,13 @@ public class MyShiroRealm extends AuthorizingRealm {
         // 权限信息对象info,用来存放查出的用户的所有的角色（role）及权限（permission）
         SimpleAuthorizationInfo info = new SimpleAuthorizationInfo();
 
-        permissionList.forEach(p->info.addStringPermission(p.getPerurl()));
+        permissionList.forEach(p -> info.addStringPermission(p.getPerurl()));
         return info;
     }
 
     /**
      * 认证
+     *
      * @param token
      * @return
      * @throws AuthenticationException
@@ -52,17 +58,19 @@ public class MyShiroRealm extends AuthorizingRealm {
     @Override
     protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
         //获取用户的输入的账号.
-        String username = (String)token.getPrincipal();
+        String username = (String) token.getPrincipal();
         AdminUser user = adminUserService.findByUserName(username);
-        if(user==null) throw new UnknownAccountException();
-        if (0==user.getEnable()) {
+        if (user == null) {
+            throw new UnknownAccountException();
+        }
+        if (0 == user.getEnable()) {
             throw new LockedAccountException(); // 帐号锁定
         }
         SimpleAuthenticationInfo authenticationInfo = new SimpleAuthenticationInfo(
-                user.getId(), //用户
-                user.getPassword(), //密码
-                ByteSource.Util.bytes(username),
-                getName() //realm name
+            user.getId(), //用户
+            user.getPassword(), //密码
+            ByteSource.Util.bytes(username),
+            getName() //realm name
         );
         // 把用户信息放在session里
         Session session = SecurityUtils.getSubject().getSession();

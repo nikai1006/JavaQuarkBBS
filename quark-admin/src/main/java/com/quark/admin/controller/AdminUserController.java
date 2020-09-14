@@ -5,12 +5,15 @@ import com.quark.common.base.BaseController;
 import com.quark.common.dto.PageResult;
 import com.quark.common.dto.QuarkResult;
 import com.quark.common.entity.AdminUser;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.Arrays;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/admins")
@@ -30,15 +33,15 @@ public class AdminUserController extends BaseController {
      */
     @GetMapping
     public PageResult getAll(AdminUser adminUser, String draw,
-                             @RequestParam(required = false, defaultValue = "1") int start,
-                             @RequestParam(required = false, defaultValue = "10") int length) {
+        @RequestParam(required = false, defaultValue = "1") int start,
+        @RequestParam(required = false, defaultValue = "10") int length) {
         int pageNo = start / length;
         Page<AdminUser> page = adminUserService.findByPage(adminUser, pageNo, length);
         PageResult<List<AdminUser>> result = new PageResult<>(
-                draw,
-                page.getTotalElements(),
-                page.getTotalElements(),
-                page.getContent());
+            draw,
+            page.getTotalElements(),
+            page.getTotalElements(),
+            page.getContent());
         return result;
     }
 
@@ -46,8 +49,9 @@ public class AdminUserController extends BaseController {
     public QuarkResult addAdmin(AdminUser adminUser) {
 
         QuarkResult result = restProcessor(() -> {
-            if (adminUserService.findByUserName(adminUser.getUsername()) != null)
+            if (adminUserService.findByUserName(adminUser.getUsername()) != null) {
                 return QuarkResult.error("用户名重复");
+            }
             adminUserService.saveAdmin(adminUser);
             return QuarkResult.ok();
         });
