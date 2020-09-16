@@ -1,0 +1,7 @@
+spring:
+  redis:
+    host: 192.168.2.162
+    timeout: 0
+    pool:
+      max-idle: 8
+      max-wait: -1
